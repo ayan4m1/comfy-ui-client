@@ -20,6 +20,7 @@ import type {
   SystemStatsResponse,
   UploadImageResult,
   ViewMetadataResponse,
+  PromptHistory,
 } from './types.js';
 
 // TODO: Make logger customizable
@@ -350,19 +351,11 @@ export class ComfyUIClient {
     }
   }
 
-  async getImages(prompt: Prompt): Promise<ImagesResponse> {
-    if (!this.ws) {
-      throw new Error(
-        'WebSocket client is not connected. Please call connect() before interacting.',
-      );
-    }
-
+  async getResult(prompt: Prompt): Promise<PromptHistory> {
     const queue = await this.queuePrompt(prompt);
     const promptId = queue.prompt_id;
 
-    return new Promise<ImagesResponse>((resolve, reject) => {
-      const outputImages: ImagesResponse = {};
-
+    return new Promise<PromptHistory>((resolve, reject) => {
       const onMessage = async (data: WebSocket.RawData, isBinary: boolean) => {
         // Previews are binary data
         if (isBinary) {
@@ -384,30 +377,9 @@ export class ComfyUIClient {
                 const historyRes = await this.getHistory(promptId);
                 const history = historyRes[promptId];
 
-                // Populate output images
-                for (const nodeId of Object.keys(history.outputs)) {
-                  const nodeOutput = history.outputs[nodeId];
-                  if (nodeOutput.images) {
-                    const imagesOutput: ImageContainer[] = [];
-                    for (const image of nodeOutput.images) {
-                      const blob = await this.getImage(
-                        image.filename,
-                        image.subfolder,
-                        image.type,
-                      );
-                      imagesOutput.push({
-                        blob,
-                        image,
-                      });
-                    }
-
-                    outputImages[nodeId] = imagesOutput;
-                  }
-                }
-
                 // Remove listener
                 this.ws?.off('message', onMessage);
-                return resolve(outputImages);
+                return resolve(history);
               }
             }
           }
@@ -418,6 +390,39 @@ export class ComfyUIClient {
 
       // Add listener
       this.ws?.on('message', onMessage);
+    });
+  }
+
+  async getImages(prompt: Prompt): Promise<ImagesResponse> {
+    return new Promise<ImagesResponse>(async (resolve, reject) => {
+      try {
+        const outputImages: ImagesResponse = {};
+        const history = await this.getResult(prompt);
+
+        // Populate output images
+        for (const nodeId of Object.keys(history.outputs)) {
+          const nodeOutput = history.outputs[nodeId];
+          if (nodeOutput.images) {
+            const imagesOutput: ImageContainer[] = [];
+            for (const image of nodeOutput.images) {
+              const blob = await this.getImage(
+                image.filename,
+                image.subfolder,
+                image.type,
+              );
+              imagesOutput.push({
+                blob,
+                image,
+              });
+            }
+
+            outputImages[nodeId] = imagesOutput;
+          }
+        }
+        resolve(outputImages);
+      } catch (err) {
+        return reject(err);
+      }
     });
   }
 }
