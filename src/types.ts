@@ -53,7 +53,7 @@ export interface PromptHistory {
 }
 
 export interface HistoryResult {
-  [clientId: string]: PromptHistory;
+  [prompt_id: string]: PromptHistory;
 }
 
 export interface OutputImage {

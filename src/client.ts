@@ -30,6 +30,7 @@ const logger = pino({
 export class ComfyUIClient {
   public serverAddress: string;
   public clientId: string;
+  public historyResult: HistoryResult = {};
 
   protected ws?: WebSocket;
 
@@ -299,12 +300,35 @@ export class ComfyUIClient {
     if ('error' in json) {
       throw new Error(JSON.stringify(json));
     }
+    
+    this.historyResult = json;
 
     return json;
   }
 
   async getQueue(): Promise<QueueResponse> {
     const res = await fetch(`http://${this.serverAddress}/queue`);
+
+    const json: QueueResponse | ResponseError = await res.json();
+
+    if ('error' in json) {
+      throw new Error(JSON.stringify(json));
+    }
+
+    return json;
+  }
+
+  async deleteQueue(id: string): Promise<QueueResponse> {
+    const res = await fetch(`http://${this.serverAddress}/queue`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        delete: id
+      }),
+    });
 
     const json: QueueResponse | ResponseError = await res.json();
 
