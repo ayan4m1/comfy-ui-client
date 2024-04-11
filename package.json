@@ -1,6 +1,6 @@
 {
   "name": "@artifyfun/comfy-ui-client",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "packageManager": "pnpm@7.5.0",
   "engines": {
     "node": ">=16.0.0"
@@ -44,7 +44,8 @@
     "build": "tsup src/index.ts --dts --format cjs,esm",
     "dev": "npm run build --watch",
     "lint": "eslint .",
-    "prettier": "prettier --config .prettierrc --write ./src"
+    "prettier": "prettier --config .prettierrc --write ./src",
+    "release": "npm publish --access public"
   },
   "dependencies": {
     "pino": "^8.14.2",

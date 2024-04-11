@@ -32,12 +32,14 @@ export class ComfyUIClient {
   public serverAddress: string;
   public clientId: string;
   public historyResult: HistoryResult = {};
+  public eventEmitter: (type: string, data: any) => void = () => {};
 
   protected ws?: WebSocket;
 
-  constructor(serverAddress: string, clientId: string) {
+  constructor(serverAddress: string, clientId: string, eventEmitter?: (type: string, data: any) => void) {
     this.serverAddress = serverAddress;
     this.clientId = clientId;
+    this.eventEmitter = eventEmitter || (() => {});
   }
 
   connect() {
@@ -56,15 +58,18 @@ export class ComfyUIClient {
 
       this.ws.on('open', () => {
         logger.info('Connection open');
+        this.eventEmitter('open', null);
         resolve();
       });
 
       this.ws.on('close', () => {
         logger.info('Connection closed');
+        this.eventEmitter('close', null);
       });
 
       this.ws.on('error', (err) => {
         logger.error({ err }, 'WebSockets error');
+        this.eventEmitter('error', err);
       });
 
       this.ws.on('message', (data, isBinary) => {
@@ -72,6 +77,7 @@ export class ComfyUIClient {
           logger.debug('Received binary data');
         } else {
           logger.debug('Received data: %s', data.toString());
+          this.eventEmitter('message', data);
         }
       });
     });
@@ -126,6 +132,8 @@ export class ComfyUIClient {
     if ('error' in json) {
       throw new Error(JSON.stringify(json));
     }
+
+    this.eventEmitter('queueInfo', json);
 
     return json;
   }
@@ -365,11 +373,13 @@ export class ComfyUIClient {
         try {
           const message = JSON.parse(data.toString());
           if (message.type === 'executing') {
+            this.eventEmitter('executing', message);
             const messageData = message.data;
             if (!messageData.node) {
               const donePromptId = messageData.prompt_id;
 
               logger.info(`Done executing prompt (ID: ${donePromptId})`);
+              this.eventEmitter('done', message);
 
               // Execution is done
               if (messageData.prompt_id === promptId) {
