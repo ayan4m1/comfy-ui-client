@@ -1,6 +1,6 @@
 {
   "name": "@artifyfun/comfy-ui-client",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "packageManager": "pnpm@7.5.0",
   "engines": {
     "node": ">=16.0.0"

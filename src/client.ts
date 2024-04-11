@@ -43,7 +43,7 @@ export class ComfyUIClient {
   }
 
   connect() {
-    return new Promise<void>(async (resolve) => {
+    return new Promise<void>(async (resolve, reject) => {
       if (this.ws) {
         await this.disconnect();
       }
@@ -69,6 +69,7 @@ export class ComfyUIClient {
 
       this.ws.on('error', (err) => {
         logger.error({ err }, 'WebSockets error');
+        reject(err);
         this.eventEmitter('error', err);
       });
 
