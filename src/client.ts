@@ -135,20 +135,14 @@ export class ComfyUIClient {
     return json;
   }
 
-  async interrupt(): Promise<void> {
-    const res = await fetch(`http://${this.serverAddress}/interrupt`, {
+  interrupt(): Promise<Response> {
+    return fetch(`http://${this.serverAddress}/interrupt`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
     });
-
-    const json: QueuePromptResult | ResponseError = await res.json();
-
-    if ('error' in json) {
-      throw new Error(JSON.stringify(json));
-    }
   }
 
   async editHistory(params: EditHistoryRequest): Promise<void> {
