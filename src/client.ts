@@ -2,7 +2,7 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import pino from 'pino';
-import WebSocket from 'ws';
+import WebSocket from 'isomorphic-ws';
 
 import type {
   EditHistoryRequest,
@@ -52,33 +52,54 @@ export class ComfyUIClient {
 
       logger.info(`Connecting to url: ${url}`);
 
-      this.ws = new WebSocket(url, {
-        perMessageDeflate: false,
-      });
+      this.ws = new WebSocket(url);
 
-      this.ws.on('open', () => {
-        logger.info('Connection open');
-        resolve();
-      });
+      if (typeof window === 'undefined') {
+        this.ws.on('open', () => {
+          logger.info('Connection open');
+          resolve();
+        });
 
-      this.ws.on('close', () => {
-        logger.info('Connection closed');
-      });
+        this.ws.on('close', () => {
+          logger.info('Connection closed');
+        });
 
-      this.ws.on('error', (err) => {
-        logger.error({ err }, 'WebSockets error');
-        reject(err);
-        this.eventEmitter('error', err);
-      });
+        this.ws.on('error', (err) => {
+          logger.error({ err }, 'WebSockets error');
+          reject(err);
+          this.eventEmitter('error', err);
+        });
 
-      this.ws.on('message', (data, isBinary) => {
-        if (isBinary) {
-          logger.debug('Received binary data');
-        } else {
-          logger.debug('Received data: %s', data.toString());
-          this.eventEmitter('message', data);
+        this.ws.on('message', (data, isBinary) => {
+          if (isBinary) {
+            logger.debug('Received binary data');
+          } else {
+            logger.debug('Received data: %s', data.toString());
+            this.eventEmitter('message', data);
+          }
+        });
+      } else {
+        this.ws.onopen = () => {
+          logger.info('Connection open');
+          resolve();
+        };
+        this.ws.onclose = () => {
+          logger.info('Connection closed');
+        };
+        this.ws.onerror = (err) => {
+          logger.error({ err }, 'WebSockets error');
+          reject(err);
+          this.eventEmitter('error', err);
         }
-      });
+        this.ws.onmessage = (event) => {
+          if (typeof event.data === 'string') {
+            logger.debug('Received data: %s', event.data);
+            this.eventEmitter('message', event.data);
+          } else {
+            logger.debug('Received binary data');
+          }
+        }
+      }
     });
   }
 
@@ -345,6 +366,7 @@ export class ComfyUIClient {
         const arrayBuffer = await img.blob.arrayBuffer();
 
         const outputPath = join(outputDir, img.image.filename);
+        // @ts-ignore
         await writeFile(outputPath, Buffer.from(arrayBuffer));
       }
     }
