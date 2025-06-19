@@ -29,15 +29,15 @@ const logger = pino({
 });
 
 export class ComfyUIClient {
-  public serverAddress: string;
+  public host: string;
   public clientId: string;
   public historyResult: HistoryResult = {};
   public eventEmitter: (type: string, data: any) => void = () => {};
 
   protected ws?: WebSocket;
 
-  constructor(serverAddress: string, clientId: string, eventEmitter?: (type: string, data: any) => void) {
-    this.serverAddress = serverAddress;
+  constructor(host: string, clientId: string, eventEmitter?: (type: string, data: any) => void) {
+    this.host = host;
     this.clientId = clientId;
     this.eventEmitter = eventEmitter || (() => {});
   }
@@ -48,7 +48,7 @@ export class ComfyUIClient {
         await this.disconnect();
       }
 
-      const url = `ws://${this.serverAddress}/ws?clientId=${this.clientId}`;
+      const url = `${this.host.replace('http', 'ws')}/ws?clientId=${this.clientId}`;
 
       logger.info(`Connecting to url: ${url}`);
 
@@ -111,7 +111,7 @@ export class ComfyUIClient {
   }
 
   async getEmbeddings(): Promise<string[]> {
-    const res = await fetch(`http://${this.serverAddress}/embeddings`);
+    const res = await fetch(`${this.host}/embeddings`);
 
     const json: string[] | ResponseError = await res.json();
 
@@ -123,7 +123,7 @@ export class ComfyUIClient {
   }
 
   async getExtensions(): Promise<string[]> {
-    const res = await fetch(`http://${this.serverAddress}/extensions`);
+    const res = await fetch(`${this.host}/extensions`);
 
     const json: string[] | ResponseError = await res.json();
 
@@ -135,7 +135,7 @@ export class ComfyUIClient {
   }
 
   async queuePrompt(prompt: Prompt): Promise<QueuePromptResult> {
-    const res = await fetch(`http://${this.serverAddress}/prompt`, {
+    const res = await fetch(`${this.host}/prompt`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -157,7 +157,7 @@ export class ComfyUIClient {
   }
 
   interrupt(): Promise<Response> {
-    return fetch(`http://${this.serverAddress}/interrupt`, {
+    return fetch(`${this.host}/interrupt`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -167,7 +167,7 @@ export class ComfyUIClient {
   }
 
   async editHistory(params: EditHistoryRequest): Promise<void> {
-    const res = await fetch(`http://${this.serverAddress}/history`, {
+    const res = await fetch(`${this.host}/history`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -195,7 +195,7 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(`http://${this.serverAddress}/upload/image`, {
+    const res = await fetch(`${this.host}/upload/image`, {
       method: 'POST',
       body: formData,
     });
@@ -223,7 +223,7 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(`http://${this.serverAddress}/upload/mask`, {
+    const res = await fetch(`${this.host}/upload/mask`, {
       method: 'POST',
       body: formData,
     });
@@ -243,7 +243,7 @@ export class ComfyUIClient {
     type: string,
   ): Promise<Blob> {
     const res = await fetch(
-      `http://${this.serverAddress}/view?` +
+      `${this.host}/view?` +
         new URLSearchParams({
           filename,
           subfolder,
@@ -260,7 +260,7 @@ export class ComfyUIClient {
     filename: string,
   ): Promise<ViewMetadataResponse> {
     const res = await fetch(
-      `http://${this.serverAddress}/view_metadata/${folderName}?filename=${filename}`,
+      `${this.host}/view_metadata/${folderName}?filename=${filename}`,
     );
 
     const json: ViewMetadataResponse | ResponseError = await res.json();
@@ -273,7 +273,7 @@ export class ComfyUIClient {
   }
 
   async getSystemStats(): Promise<SystemStatsResponse> {
-    const res = await fetch(`http://${this.serverAddress}/system_stats`);
+    const res = await fetch(`${this.host}/system_stats`);
 
     const json: SystemStatsResponse | ResponseError = await res.json();
 
@@ -285,7 +285,7 @@ export class ComfyUIClient {
   }
 
   async getPrompt(): Promise<PromptQueueResponse> {
-    const res = await fetch(`http://${this.serverAddress}/prompt`);
+    const res = await fetch(`${this.host}/prompt`);
 
     const json: PromptQueueResponse | ResponseError = await res.json();
 
@@ -298,7 +298,7 @@ export class ComfyUIClient {
 
   async getObjectInfo(nodeClass?: string): Promise<ObjectInfoResponse> {
     const res = await fetch(
-      `http://${this.serverAddress}/object_info` +
+      `${this.host}/object_info` +
         (nodeClass ? `/${nodeClass}` : ''),
     );
 
@@ -313,7 +313,7 @@ export class ComfyUIClient {
 
   async getHistory(promptId?: string): Promise<HistoryResult> {
     const res = await fetch(
-      `http://${this.serverAddress}/history` + (promptId ? `/${promptId}` : ''),
+      `${this.host}/history` + (promptId ? `/${promptId}` : ''),
     );
 
     const json: HistoryResult | ResponseError = await res.json();
@@ -321,14 +321,14 @@ export class ComfyUIClient {
     if ('error' in json) {
       throw new Error(JSON.stringify(json));
     }
-    
+
     this.historyResult = json;
 
     return json;
   }
 
   async getQueue(): Promise<QueueResponse> {
-    const res = await fetch(`http://${this.serverAddress}/queue`);
+    const res = await fetch(`${this.host}/queue`);
 
     const json: QueueResponse | ResponseError = await res.json();
 
@@ -340,7 +340,7 @@ export class ComfyUIClient {
   }
 
   async deleteQueue(id: string): Promise<QueueResponse> {
-    const res = await fetch(`http://${this.serverAddress}/queue`, {
+    const res = await fetch(`${this.host}/queue`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
