@@ -1,5 +1,5 @@
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+// import { writeFile } from 'fs/promises';
+// import { join } from 'path';
 
 import pino from 'pino';
 import WebSocket from 'isomorphic-ws';
@@ -360,17 +360,17 @@ export class ComfyUIClient {
     return json;
   }
 
-  async saveImages(response: ImagesResponse, outputDir: string) {
-    for (const nodeId of Object.keys(response)) {
-      for (const img of response[nodeId]) {
-        const arrayBuffer = await img.blob.arrayBuffer();
+  // async saveImages(response: ImagesResponse, outputDir: string) {
+  //   for (const nodeId of Object.keys(response)) {
+  //     for (const img of response[nodeId]) {
+  //       const arrayBuffer = await img.blob.arrayBuffer();
 
-        const outputPath = join(outputDir, img.image.filename);
-        // @ts-ignore
-        await writeFile(outputPath, Buffer.from(arrayBuffer));
-      }
-    }
-  }
+  //       const outputPath = join(outputDir, img.image.filename);
+  //       // @ts-ignore
+  //       await writeFile(outputPath, Buffer.from(arrayBuffer));
+  //     }
+  //   }
+  // }
 
   async getResult(prompt: Prompt): Promise<PromptHistory> {
     const queue = await this.queuePrompt(prompt);

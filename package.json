@@ -1,6 +1,6 @@
 {
   "name": "@artifyfun/comfy-ui-client",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "engines": {
     "node": ">=16.0.0"
   },
@@ -40,7 +40,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --dts --format cjs,esm",
+    "build": "tsup src/index.ts --dts --format cjs,esm,iife --platform browser --globalName ComfyUIClient",
     "dev": "npm run build --watch",
     "lint": "eslint .",
     "prettier": "prettier --config .prettierrc --write ./src",
