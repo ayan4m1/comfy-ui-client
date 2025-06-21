@@ -34,9 +34,13 @@ export class ComfyUIClient {
   public historyResult: HistoryResult = {};
   public eventEmitter: (type: string, data: any) => void = () => {};
 
-  protected ws?: WebSocket;
+  protected ws?: any;
 
-  constructor(host: string, clientId: string, eventEmitter?: (type: string, data: any) => void) {
+  constructor(
+    host: string,
+    clientId: string,
+    eventEmitter?: (type: string, data: any) => void,
+  ) {
     this.host = host;
     this.clientId = clientId;
     this.eventEmitter = eventEmitter || (() => {});
@@ -54,52 +58,68 @@ export class ComfyUIClient {
 
       this.ws = new WebSocket(url);
 
-      if (typeof window === 'undefined') {
-        this.ws.on('open', () => {
-          logger.info('Connection open');
-          resolve();
-        });
-
-        this.ws.on('close', () => {
-          logger.info('Connection closed');
-        });
-
-        this.ws.on('error', (err) => {
-          logger.error({ err }, 'WebSockets error');
-          reject(err);
-          this.eventEmitter('error', err);
-        });
-
-        this.ws.on('message', (data, isBinary) => {
-          if (isBinary) {
-            logger.debug('Received binary data');
-          } else {
-            logger.debug('Received data: %s', data.toString());
-            this.eventEmitter('message', data);
+      if (typeof window !== 'undefined') {
+        // 在浏览器环境中实现事件监听方法
+        this.ws.on = (event: string, callback: Function) => {
+          switch (event) {
+            case 'open':
+              this.ws.onopen = callback;
+              break;
+            case 'close':
+              this.ws.onclose = callback;
+              break;
+            case 'error':
+              this.ws.onerror = callback;
+              break;
+            case 'message':
+              this.ws.onmessage = (event: MessageEvent) => {
+                callback(event.data, event.data instanceof Blob);
+              };
+              break;
           }
-        });
-      } else {
-        this.ws.onopen = () => {
-          logger.info('Connection open');
-          resolve();
         };
-        this.ws.onclose = () => {
-          logger.info('Connection closed');
-        };
-        this.ws.onerror = (err) => {
-          logger.error({ err }, 'WebSockets error');
-          reject(err);
-          this.eventEmitter('error', err);
-        }
-        this.ws.onmessage = (event) => {
-          if (typeof event.data === 'string') {
-            logger.debug('Received data: %s', event.data);
-            this.eventEmitter('message', event.data);
-          } else {
-            logger.debug('Received binary data');
+
+        this.ws.off = (event: string, callback: Function) => {
+          switch (event) {
+            case 'open':
+              this.ws.onopen = null;
+              break;
+            case 'close':
+              this.ws.onclose = null;
+              break;
+            case 'error':
+              this.ws.onerror = null;
+              break;
+            case 'message':
+              this.ws.onmessage = null;
+              break;
           }
-        }
+        };
       }
+
+      this.ws.on('open', () => {
+        logger.info('Connection open');
+        resolve();
+      });
+
+      this.ws.on('close', () => {
+        logger.info('Connection closed');
+      });
+
+      this.ws.on('error', (err: any) => {
+        logger.error({ err }, 'WebSockets error');
+        reject(err);
+        this.eventEmitter('error', err);
+      });
+
+      this.ws.on('message', (data: any, isBinary: boolean) => {
+        if (isBinary) {
+          logger.debug('Received binary data');
+        } else {
+          logger.debug('Received data: %s', data.toString());
+          this.eventEmitter('message', data);
+        }
+      });
     });
   }
 
@@ -298,8 +318,7 @@ export class ComfyUIClient {
 
   async getObjectInfo(nodeClass?: string): Promise<ObjectInfoResponse> {
     const res = await fetch(
-      `${this.host}/object_info` +
-        (nodeClass ? `/${nodeClass}` : ''),
+      `${this.host}/object_info` + (nodeClass ? `/${nodeClass}` : ''),
     );
 
     const json: ObjectInfoResponse | ResponseError = await res.json();
@@ -347,7 +366,7 @@ export class ComfyUIClient {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        delete: id
+        delete: id,
       }),
     });
 
