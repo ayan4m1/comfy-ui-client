@@ -33,6 +33,7 @@ export class ComfyUIClient {
   public clientId: string;
   public historyResult: HistoryResult = {};
   public eventEmitter: (type: string, data: any) => void = () => {};
+  public handlers: any;
 
   protected ws?: any;
 
@@ -44,6 +45,12 @@ export class ComfyUIClient {
     this.host = host;
     this.clientId = clientId;
     this.eventEmitter = eventEmitter || (() => {});
+    this.handlers = {
+      open: [],
+      close: [],
+      error: [],
+      message: [],
+    };
   }
 
   connect() {
@@ -59,40 +66,39 @@ export class ComfyUIClient {
       this.ws = new WebSocket(url);
 
       if (typeof window !== 'undefined') {
-        // 在浏览器环境中实现事件监听方法
+        // 设置原生WebSocket事件处理器（每个事件只设置一次）
+        this.ws.onopen = (event: any) => {
+          this.handlers.open.forEach((cb: any) => cb(event));
+        };
+
+        this.ws.onclose = (event: any) => {
+          this.handlers.close.forEach((cb: any) => cb(event));
+        };
+
+        this.ws.onerror = (event: any) => {
+          this.handlers.error.forEach((cb: any) => cb(event));
+        };
+
+        this.ws.onmessage = (event: any) => {
+          this.handlers.message.forEach((cb: any) => {
+            cb(event.data, event.data instanceof Blob);
+          });
+        };
+
+        // 自定义on方法（支持多次绑定）
         this.ws.on = (event: string, callback: Function) => {
-          switch (event) {
-            case 'open':
-              this.ws.onopen = callback;
-              break;
-            case 'close':
-              this.ws.onclose = callback;
-              break;
-            case 'error':
-              this.ws.onerror = callback;
-              break;
-            case 'message':
-              this.ws.onmessage = (event: MessageEvent) => {
-                callback(event.data, event.data instanceof Blob);
-              };
-              break;
+          if (this.handlers[event]) {
+            this.handlers[event].push(callback);
+          } else {
+            console.error(`Unknown event type: ${event}`);
           }
         };
 
         this.ws.off = (event: string, callback: Function) => {
-          switch (event) {
-            case 'open':
-              this.ws.onopen = null;
-              break;
-            case 'close':
-              this.ws.onclose = null;
-              break;
-            case 'error':
-              this.ws.onerror = null;
-              break;
-            case 'message':
-              this.ws.onmessage = null;
-              break;
+          if (this.handlers[event]) {
+            this.handlers[event] = this.handlers[event].filter(
+              (cb: any) => cb !== callback,
+            );
           }
         };
       }
