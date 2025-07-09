@@ -336,9 +336,14 @@ export class ComfyUIClient {
     return json;
   }
 
-  async getHistory(promptId?: string): Promise<HistoryResult> {
+  async getHistory(fetchOption: any, promptId?: string): Promise<HistoryResult> {
+    const host = fetchOption ? fetchOption.host : this.host
+    const method = fetchOption ? fetchOption.method : 'get'
     const res = await fetch(
-      `${this.host}/history` + (promptId ? `/${promptId}` : ''),
+      `${host}/history` + (promptId ? `/${promptId}` : ''),
+      {
+        method
+      }
     );
 
     const json: HistoryResult | ResponseError = await res.json();
@@ -352,8 +357,12 @@ export class ComfyUIClient {
     return json;
   }
 
-  async getQueue(): Promise<QueueResponse> {
-    const res = await fetch(`${this.host}/queue`);
+  async getQueue(fetchOption: any): Promise<QueueResponse> {
+    const host = fetchOption ? fetchOption.host : this.host
+    const method = fetchOption ? fetchOption.method : 'get'
+    const res = await fetch(`${host}/queue`, {
+      method
+    });
 
     const json: QueueResponse | ResponseError = await res.json();
 
@@ -397,7 +406,7 @@ export class ComfyUIClient {
   //   }
   // }
 
-  async getResult(prompt: Prompt): Promise<PromptHistory> {
+  async getResult(fetchOption: any, prompt: Prompt): Promise<PromptHistory> {
     const queue = await this.queuePrompt(prompt);
     const promptId = queue.prompt_id;
 
@@ -420,7 +429,7 @@ export class ComfyUIClient {
               // Execution is done
               if (messageData.prompt_id === promptId) {
                 // Get history
-                const historyRes = await this.getHistory(promptId);
+                const historyRes = await this.getHistory(fetchOption, promptId);
                 const history = historyRes[promptId];
 
                 // Remove listener
@@ -443,7 +452,7 @@ export class ComfyUIClient {
     return new Promise<ImagesResponse>(async (resolve, reject) => {
       try {
         const outputImages: ImagesResponse = {};
-        const history = await this.getResult(prompt);
+        const history = await this.getResult({}, prompt);
 
         // Populate output images
         for (const nodeId of Object.keys(history.outputs)) {
