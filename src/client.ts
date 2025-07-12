@@ -336,11 +336,26 @@ export class ComfyUIClient {
     return json;
   }
 
-  async getHistory(fetchOption: any, promptId?: string): Promise<HistoryResult> {
+  async getHistory(fetchOptionOrPromptId?: any, promptId?: string): Promise<HistoryResult> {
+    // 兼容旧版本调用方式：getHistory(promptId)
+    // 如果第一个参数是字符串且第二个参数未定义，说明是旧版本调用
+    let fetchOption: any;
+    let actualPromptId: string | undefined;
+
+    if (typeof fetchOptionOrPromptId === 'string' && promptId === undefined) {
+      // 旧版本调用：getHistory(promptId)
+      actualPromptId = fetchOptionOrPromptId;
+      fetchOption = undefined;
+    } else {
+      // 新版本调用：getHistory(fetchOption, promptId)
+      fetchOption = fetchOptionOrPromptId;
+      actualPromptId = promptId;
+    }
+
     const host = fetchOption ? fetchOption.host : this.host
     const method = fetchOption ? fetchOption.method : 'get'
     const res = await fetch(
-      `${host}/history` + (promptId ? `/${promptId}` : ''),
+      `${host}/history` + (actualPromptId ? `/${actualPromptId}` : ''),
       {
         method
       }
