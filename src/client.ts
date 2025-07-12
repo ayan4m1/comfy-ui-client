@@ -421,7 +421,21 @@ export class ComfyUIClient {
   //   }
   // }
 
-  async getResult(fetchOption: any, prompt: Prompt): Promise<PromptHistory> {
+  async getResult(fetchOptionOrPrompt: any, promptParam?: Prompt): Promise<PromptHistory> {
+    // 兼容旧版本调用方式：getResult(prompt)
+    // 如果只有一个参数且是对象类型，说明是旧版本调用
+    let fetchOption: any;
+    let prompt: Prompt;
+
+    if (promptParam === undefined) {
+      // 旧版本调用：getResult(prompt)
+      prompt = fetchOptionOrPrompt;
+      fetchOption = undefined;
+    } else {
+      // 新版本调用：getResult(fetchOption, prompt)
+      fetchOption = fetchOptionOrPrompt;
+      prompt = promptParam;
+    }
     const queue = await this.queuePrompt(prompt);
     const promptId = queue.prompt_id;
 
@@ -467,7 +481,7 @@ export class ComfyUIClient {
     return new Promise<ImagesResponse>(async (resolve, reject) => {
       try {
         const outputImages: ImagesResponse = {};
-        const history = await this.getResult({}, prompt);
+        const history = await this.getResult(prompt);
 
         // Populate output images
         for (const nodeId of Object.keys(history.outputs)) {
