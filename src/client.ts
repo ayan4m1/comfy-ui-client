@@ -142,7 +142,9 @@ export class ComfyUIClient {
   }
 
   async getEmbeddings(): Promise<string[]> {
-    const res = await fetch(this.getUrl('/embeddings'));
+    const res = await fetch(this.getUrl('/embeddings'), {
+      headers: this.getRequestHeaders(),
+    });
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -153,7 +155,9 @@ export class ComfyUIClient {
   }
 
   async getExtensions(): Promise<string[]> {
-    const res = await fetch(this.getUrl('/extensions'));
+    const res = await fetch(this.getUrl('/extensions'), {
+      headers: this.getRequestHeaders(),
+    });
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -169,6 +173,7 @@ export class ComfyUIClient {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...this.getRequestHeaders(),
       },
       body: JSON.stringify({
         prompt,
@@ -191,6 +196,7 @@ export class ComfyUIClient {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...this.getRequestHeaders(),
       },
     });
   }
@@ -201,6 +207,7 @@ export class ComfyUIClient {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...this.getRequestHeaders(),
       },
       body: JSON.stringify(params),
     });
@@ -226,6 +233,7 @@ export class ComfyUIClient {
     const res = await fetch(this.getUrl('/upload/image'), {
       method: 'POST',
       body: formData,
+      headers: this.getRequestHeaders(),
     });
     const json: UploadImageResult | ResponseError = await res.json();
 
@@ -253,6 +261,7 @@ export class ComfyUIClient {
     const res = await fetch(this.getUrl('/upload/mask'), {
       method: 'POST',
       body: formData,
+      headers: this.getRequestHeaders(),
     });
     const json: UploadImageResult | ResponseError = await res.json();
 
@@ -277,6 +286,9 @@ export class ComfyUIClient {
           type,
         }),
       ),
+      {
+        headers: this.getRequestHeaders(),
+      },
     );
 
     return await res.blob();
@@ -288,6 +300,9 @@ export class ComfyUIClient {
   ): Promise<ViewMetadataResponse> {
     const res = await fetch(
       this.getUrl(`/view_metadata/${folderName}?filename=${filename}`),
+      {
+        headers: this.getRequestHeaders(),
+      },
     );
     const json: ViewMetadataResponse | ResponseError = await res.json();
 
@@ -299,7 +314,9 @@ export class ComfyUIClient {
   }
 
   async getSystemStats(): Promise<SystemStatsResponse> {
-    const res = await fetch(this.getUrl('/system_stats'));
+    const res = await fetch(this.getUrl('/system_stats'), {
+      headers: this.getRequestHeaders(),
+    });
     const json: SystemStatsResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -310,7 +327,9 @@ export class ComfyUIClient {
   }
 
   async getPrompt(): Promise<PromptQueueResponse> {
-    const res = await fetch(this.getUrl('/prompt'));
+    const res = await fetch(this.getUrl('/prompt'), {
+      headers: this.getRequestHeaders(),
+    });
     const json: PromptQueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -323,6 +342,9 @@ export class ComfyUIClient {
   async getObjectInfo(nodeClass?: string): Promise<ObjectInfoResponse> {
     const res = await fetch(
       this.getUrl(`/object_info` + (nodeClass ? `/${nodeClass}` : '')),
+      {
+        headers: this.getRequestHeaders(),
+      },
     );
     const json: ObjectInfoResponse | ResponseError = await res.json();
 
@@ -355,11 +377,10 @@ export class ComfyUIClient {
     const host = fetchOption ? fetchOption.host : this.host;
     const method = fetchOption ? fetchOption.method : 'get';
     const res = await fetch(
-      `${host}/history${actualPromptId ? `/${actualPromptId}` : ''}${
-        this.token ? `?token=${this.token}` : ''
-      }`,
+      `${host}/history${actualPromptId ? `/${actualPromptId}` : ''}`,
       {
         method,
+        headers: this.getRequestHeaders(),
       },
     );
     const json: HistoryResult | ResponseError = await res.json();
@@ -376,12 +397,10 @@ export class ComfyUIClient {
   async getQueue(fetchOption: any): Promise<QueueResponse> {
     const host = fetchOption ? fetchOption.host : this.host;
     const method = fetchOption ? fetchOption.method : 'get';
-    const res = await fetch(
-      `${host}/queue${this.token ? `?token=${this.token}` : ''}`,
-      {
-        method,
-      },
-    );
+    const res = await fetch(`${host}/queue`, {
+      method,
+      headers: this.getRequestHeaders(),
+    });
     const json: QueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -397,6 +416,7 @@ export class ComfyUIClient {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...this.getRequestHeaders(),
       },
       body: JSON.stringify({
         delete: id,
@@ -515,14 +535,20 @@ export class ComfyUIClient {
     });
   }
 
+  private getRequestHeaders() {
+    const result: HeadersInit = {};
+
+    if (this.token) {
+      result.Authorization = `Bearer ${this.token}`;
+    }
+
+    return result;
+  }
+
   private getUrl(
     path: string,
     params: URLSearchParams = new URLSearchParams(),
   ) {
-    if (this.token) {
-      params.set('token', this.token);
-    }
-
-    return `${this.host}/${path}${params}`;
+    return `${this.host}${path}${params.size ? params : ''}`;
   }
 }
