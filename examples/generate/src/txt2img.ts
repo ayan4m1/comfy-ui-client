@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { ComfyUIClient } from 'comfy-ui-client';
-import type { Prompt } from 'comfy-ui-client';
+import { ComfyUIClient } from '@ayan4m1/comfy-ui-client';
+import type { Prompt } from '@ayan4m1/comfy-ui-client';
 
-// The ComfyUI server address
-const SERVER_ADDRESS = '127.0.0.1:8188';
+// The ComfyUI server URL
+const host = 'http://127.0.0.1:8188';
 
 export const txt2img = async (
   prompt: Prompt,
@@ -14,7 +14,7 @@ export const txt2img = async (
   const clientId = uuidv4();
 
   // Create client
-  const client = new ComfyUIClient(SERVER_ADDRESS, clientId);
+  const client = new ComfyUIClient(host, clientId);
 
   // Connect to server
   await client.connect();

@@ -1,4 +1,4 @@
-import type { Prompt } from 'comfy-ui-client';
+import type { Prompt } from '@ayan4m1/comfy-ui-client';
 
 export const exampleTxt2ImgPrompt = (): Prompt => {
   const prompt: Prompt = {
