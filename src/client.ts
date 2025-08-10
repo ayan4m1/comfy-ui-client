@@ -549,6 +549,6 @@ export class ComfyUIClient {
     path: string,
     params: URLSearchParams = new URLSearchParams(),
   ) {
-    return `${this.host}${path}${params.size ? params : ''}`;
+    return `${this.host}${path}${params.size ? `?${params.toString()}` : ''}`;
   }
 }
