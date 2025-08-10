@@ -1,19 +1,19 @@
 {
-  "name": "@artifyfun/comfy-ui-client",
+  "name": "@ayan4m1/comfy-ui-client",
   "version": "0.3.7",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22"
   },
   "description": "WebSockets API client for ComfyUI",
-  "author": "artifyfun <artifyfun@gmail.com>",
+  "author": "ayan4m1 <andrew@bulletlogic.com>",
   "license": "MIT",
-  "homepage": "https://github.com/artifyfun/comfy-ui-client",
+  "homepage": "https://github.com/ayan4m1/comfy-ui-client",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/artifyfun/comfy-ui-client.git"
+    "url": "git+https://github.com/ayan4m1/comfy-ui-client.git"
   },
   "bugs": {
-    "url": "https://github.com/artifyfun/comfy-ui-client/issues"
+    "url": "https://github.com/ayan4m1/comfy-ui-client/issues"
   },
   "keywords": [
     "comfy-ui",
