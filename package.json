@@ -1,6 +1,6 @@
 {
   "name": "@ayan4m1/comfy-ui-client",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "engines": {
     "node": ">=22"
   },
