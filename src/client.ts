@@ -212,7 +212,7 @@ export class ComfyUIClient {
   }
 
   async uploadImage(
-    image: Buffer,
+    image: ArrayBuffer,
     filename: string,
     overwrite?: boolean,
   ): Promise<UploadImageResult> {
@@ -237,7 +237,7 @@ export class ComfyUIClient {
   }
 
   async uploadMask(
-    image: Buffer,
+    image: ArrayBuffer,
     filename: string,
     originalRef: ImageRef,
     overwrite?: boolean,
