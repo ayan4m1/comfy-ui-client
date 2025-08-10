@@ -30,6 +30,7 @@ const logger = pino({
 
 export class ComfyUIClient {
   public host: string;
+  public token?: string;
   public clientId: string;
   public historyResult: HistoryResult = {};
   public eventEmitter: (type: string, data: any) => void = () => {};
@@ -40,9 +41,11 @@ export class ComfyUIClient {
   constructor(
     host: string,
     clientId: string,
+    token?: string,
     eventEmitter?: (type: string, data: any) => void,
   ) {
     this.host = host;
+    this.token = token;
     this.clientId = clientId;
     this.eventEmitter = eventEmitter || (() => {});
     this.handlers = {
@@ -59,7 +62,9 @@ export class ComfyUIClient {
         await this.disconnect();
       }
 
-      const url = `${this.host.replace('http', 'ws')}/ws?clientId=${this.clientId}`;
+      const url = `${this.host.replace('http', 'ws')}/ws?clientId=${
+        this.clientId
+      }${this.token ? `&token=${this.token}` : ''}`;
 
       logger.info(`Connecting to url: ${url}`);
 
@@ -86,7 +91,7 @@ export class ComfyUIClient {
         };
 
         // 自定义on方法（支持多次绑定）
-        this.ws.on = (event: string, callback: Function) => {
+        this.ws.on = (event: string, callback: CallableFunction) => {
           if (this.handlers[event]) {
             this.handlers[event].push(callback);
           } else {
@@ -94,7 +99,7 @@ export class ComfyUIClient {
           }
         };
 
-        this.ws.off = (event: string, callback: Function) => {
+        this.ws.off = (event: string, callback: CallableFunction) => {
           if (this.handlers[event]) {
             this.handlers[event] = this.handlers[event].filter(
               (cb: any) => cb !== callback,
@@ -137,8 +142,7 @@ export class ComfyUIClient {
   }
 
   async getEmbeddings(): Promise<string[]> {
-    const res = await fetch(`${this.host}/embeddings`);
-
+    const res = await fetch(this.getUrl('/embeddings'));
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -149,8 +153,7 @@ export class ComfyUIClient {
   }
 
   async getExtensions(): Promise<string[]> {
-    const res = await fetch(`${this.host}/extensions`);
-
+    const res = await fetch(this.getUrl('/extensions'));
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -161,7 +164,7 @@ export class ComfyUIClient {
   }
 
   async queuePrompt(prompt: Prompt): Promise<QueuePromptResult> {
-    const res = await fetch(`${this.host}/prompt`, {
+    const res = await fetch(this.getUrl('/prompt'), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -183,7 +186,7 @@ export class ComfyUIClient {
   }
 
   interrupt(): Promise<Response> {
-    return fetch(`${this.host}/interrupt`, {
+    return fetch(this.getUrl('/interrupt'), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -193,7 +196,7 @@ export class ComfyUIClient {
   }
 
   async editHistory(params: EditHistoryRequest): Promise<void> {
-    const res = await fetch(`${this.host}/history`, {
+    const res = await fetch(this.getUrl('/history'), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -201,7 +204,6 @@ export class ComfyUIClient {
       },
       body: JSON.stringify(params),
     });
-
     const json: QueuePromptResult | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -221,11 +223,10 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(`${this.host}/upload/image`, {
+    const res = await fetch(this.getUrl('/upload/image'), {
       method: 'POST',
       body: formData,
     });
-
     const json: UploadImageResult | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -249,11 +250,10 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(`${this.host}/upload/mask`, {
+    const res = await fetch(this.getUrl('/upload/mask'), {
       method: 'POST',
       body: formData,
     });
-
     const json: UploadImageResult | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -269,16 +269,17 @@ export class ComfyUIClient {
     type: string,
   ): Promise<Blob> {
     const res = await fetch(
-      `${this.host}/view?` +
+      this.getUrl(
+        '/view',
         new URLSearchParams({
           filename,
           subfolder,
           type,
         }),
+      ),
     );
 
-    const blob = await res.blob();
-    return blob;
+    return await res.blob();
   }
 
   async viewMetadata(
@@ -286,9 +287,8 @@ export class ComfyUIClient {
     filename: string,
   ): Promise<ViewMetadataResponse> {
     const res = await fetch(
-      `${this.host}/view_metadata/${folderName}?filename=${filename}`,
+      this.getUrl(`/view_metadata/${folderName}?filename=${filename}`),
     );
-
     const json: ViewMetadataResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -299,8 +299,7 @@ export class ComfyUIClient {
   }
 
   async getSystemStats(): Promise<SystemStatsResponse> {
-    const res = await fetch(`${this.host}/system_stats`);
-
+    const res = await fetch(this.getUrl('/system_stats'));
     const json: SystemStatsResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -311,8 +310,7 @@ export class ComfyUIClient {
   }
 
   async getPrompt(): Promise<PromptQueueResponse> {
-    const res = await fetch(`${this.host}/prompt`);
-
+    const res = await fetch(this.getUrl('/prompt'));
     const json: PromptQueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -324,9 +322,8 @@ export class ComfyUIClient {
 
   async getObjectInfo(nodeClass?: string): Promise<ObjectInfoResponse> {
     const res = await fetch(
-      `${this.host}/object_info` + (nodeClass ? `/${nodeClass}` : ''),
+      this.getUrl(`/object_info` + (nodeClass ? `/${nodeClass}` : '')),
     );
-
     const json: ObjectInfoResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -336,7 +333,10 @@ export class ComfyUIClient {
     return json;
   }
 
-  async getHistory(fetchOptionOrPromptId?: any, promptId?: string): Promise<HistoryResult> {
+  async getHistory(
+    fetchOptionOrPromptId?: any,
+    promptId?: string,
+  ): Promise<HistoryResult> {
     // 兼容旧版本调用方式：getHistory(promptId)
     // 如果第一个参数是字符串且第二个参数未定义，说明是旧版本调用
     let fetchOption: any;
@@ -352,15 +352,16 @@ export class ComfyUIClient {
       actualPromptId = promptId;
     }
 
-    const host = fetchOption ? fetchOption.host : this.host
-    const method = fetchOption ? fetchOption.method : 'get'
+    const host = fetchOption ? fetchOption.host : this.host;
+    const method = fetchOption ? fetchOption.method : 'get';
     const res = await fetch(
-      `${host}/history` + (actualPromptId ? `/${actualPromptId}` : ''),
+      `${host}/history${actualPromptId ? `/${actualPromptId}` : ''}${
+        this.token ? `?token=${this.token}` : ''
+      }`,
       {
-        method
-      }
+        method,
+      },
     );
-
     const json: HistoryResult | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -373,12 +374,14 @@ export class ComfyUIClient {
   }
 
   async getQueue(fetchOption: any): Promise<QueueResponse> {
-    const host = fetchOption ? fetchOption.host : this.host
-    const method = fetchOption ? fetchOption.method : 'get'
-    const res = await fetch(`${host}/queue`, {
-      method
-    });
-
+    const host = fetchOption ? fetchOption.host : this.host;
+    const method = fetchOption ? fetchOption.method : 'get';
+    const res = await fetch(
+      `${host}/queue${this.token ? `?token=${this.token}` : ''}`,
+      {
+        method,
+      },
+    );
     const json: QueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -389,7 +392,7 @@ export class ComfyUIClient {
   }
 
   async deleteQueue(id: string): Promise<QueueResponse> {
-    const res = await fetch(`${this.host}/queue`, {
+    const res = await fetch(this.getUrl('/queue'), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -399,7 +402,6 @@ export class ComfyUIClient {
         delete: id,
       }),
     });
-
     const json: QueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -421,7 +423,10 @@ export class ComfyUIClient {
   //   }
   // }
 
-  async getResult(fetchOptionOrPrompt: any, promptParam?: Prompt): Promise<PromptHistory> {
+  async getResult(
+    fetchOptionOrPrompt: any,
+    promptParam?: Prompt,
+  ): Promise<PromptHistory> {
     // 兼容旧版本调用方式：getResult(prompt)
     // 如果只有一个参数且是对象类型，说明是旧版本调用
     let fetchOption: any;
@@ -508,5 +513,16 @@ export class ComfyUIClient {
         return reject(err);
       }
     });
+  }
+
+  private getUrl(
+    path: string,
+    params: URLSearchParams = new URLSearchParams(),
+  ) {
+    if (this.token) {
+      params.set('token', this.token);
+    }
+
+    return `${this.host}/${path}${params}`;
   }
 }
