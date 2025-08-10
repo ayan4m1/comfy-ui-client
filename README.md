@@ -89,11 +89,11 @@ prompt['6'].inputs.text = 'masterpiece best quality man';
 prompt['3'].inputs.seed = 5;
 
 // Create client
-const serverAddress = '127.0.0.1:8188';
+const host = 'http://127.0.0.1:8188';
 const clientId = 'baadbabe-b00b-4206-9420-deadd00d1337';
 // Optional if using ComfyUI-Login
 const authToken = 'b2$diovjwaer98vbu89agusd89vsu8v89s';
-const client = new ComfyUIClient(serverAddress, clientId, authToken);
+const client = new ComfyUIClient(host, clientId, authToken);
 
 // Connect to server
 await client.connect();
