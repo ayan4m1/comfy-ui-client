@@ -1,8 +1,5 @@
-// import { writeFile } from 'fs/promises';
-// import { join } from 'path';
-
 import pino from 'pino';
-import WebSocket from 'isomorphic-ws';
+import WebSocket, { ErrorEvent, Event, MessageEvent } from 'isomorphic-ws';
 
 import type {
   EditHistoryRequest,
@@ -28,25 +25,28 @@ const logger = pino({
   level: 'info',
 });
 
+export type EventHandler = (type: string, data: any) => void;
+
 export class ComfyUIClient {
   public host: string;
   public token?: string;
   public clientId: string;
   public historyResult: HistoryResult = {};
-  public eventEmitter: (type: string, data: any) => void = () => {};
-  public handlers: any;
+  public eventEmitter: EventHandler = () => {};
+  public handlers: Record<string, CallableFunction[]>;
 
-  protected ws?: any;
+  protected ws?: WebSocket;
 
   constructor(
     host: string,
     clientId: string,
     token?: string,
-    eventEmitter?: (type: string, data: any) => void,
+    eventEmitter?: EventHandler,
   ) {
     this.host = host;
-    this.token = token;
     this.clientId = clientId;
+    this.token = token;
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     this.eventEmitter = eventEmitter || (() => {});
     this.handlers = {
       open: [],
@@ -72,20 +72,20 @@ export class ComfyUIClient {
 
       if (typeof window !== 'undefined') {
         // 设置原生WebSocket事件处理器（每个事件只设置一次）
-        this.ws.onopen = (event: any) => {
-          this.handlers.open.forEach((cb: any) => cb(event));
+        this.ws.onopen = (event: Event) => {
+          this.handlers.open.forEach((cb) => cb(event));
         };
 
-        this.ws.onclose = (event: any) => {
-          this.handlers.close.forEach((cb: any) => cb(event));
+        this.ws.onclose = (event: Event) => {
+          this.handlers.close.forEach((cb) => cb(event));
         };
 
-        this.ws.onerror = (event: any) => {
-          this.handlers.error.forEach((cb: any) => cb(event));
+        this.ws.onerror = (event: Event) => {
+          this.handlers.error.forEach((cb) => cb(event));
         };
 
-        this.ws.onmessage = (event: any) => {
-          this.handlers.message.forEach((cb: any) => {
+        this.ws.onmessage = (event: MessageEvent) => {
+          this.handlers.message.forEach((cb) => {
             cb(event.data, event.data instanceof Blob);
           });
         };
@@ -97,14 +97,28 @@ export class ComfyUIClient {
           } else {
             console.error(`Unknown event type: ${event}`);
           }
+
+          // should be unreachable
+          if (!this.ws) {
+            this.ws = new WebSocket(url);
+          }
+
+          return this.ws;
         };
 
         this.ws.off = (event: string, callback: CallableFunction) => {
           if (this.handlers[event]) {
             this.handlers[event] = this.handlers[event].filter(
-              (cb: any) => cb !== callback,
+              (cb) => cb !== callback,
             );
           }
+
+          // should be unreachable
+          if (!this.ws) {
+            this.ws = new WebSocket(url);
+          }
+
+          return this.ws;
         };
       }
 
@@ -117,7 +131,7 @@ export class ComfyUIClient {
         logger.info('Connection closed');
       });
 
-      this.ws.on('error', (err: any) => {
+      this.ws.on('error', (err: ErrorEvent) => {
         logger.error({ err }, 'WebSockets error');
         reject(err);
         this.eventEmitter('error', err);
@@ -142,9 +156,7 @@ export class ComfyUIClient {
   }
 
   async getEmbeddings(): Promise<string[]> {
-    const res = await fetch(this.getUrl('/embeddings'), {
-      headers: this.getRequestHeaders(),
-    });
+    const res = await this.fetch('/embeddings');
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -155,9 +167,7 @@ export class ComfyUIClient {
   }
 
   async getExtensions(): Promise<string[]> {
-    const res = await fetch(this.getUrl('/extensions'), {
-      headers: this.getRequestHeaders(),
-    });
+    const res = await this.fetch('/extensions');
     const json: string[] | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -168,12 +178,11 @@ export class ComfyUIClient {
   }
 
   async queuePrompt(prompt: Prompt): Promise<QueuePromptResult> {
-    const res = await fetch(this.getUrl('/prompt'), {
+    const res = await this.fetch('/prompt', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...this.getRequestHeaders(),
       },
       body: JSON.stringify({
         prompt,
@@ -191,23 +200,21 @@ export class ComfyUIClient {
   }
 
   interrupt(): Promise<Response> {
-    return fetch(this.getUrl('/interrupt'), {
+    return this.fetch('/interrupt', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...this.getRequestHeaders(),
       },
     });
   }
 
   async editHistory(params: EditHistoryRequest): Promise<void> {
-    const res = await fetch(this.getUrl('/history'), {
+    const res = await this.fetch('/history', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...this.getRequestHeaders(),
       },
       body: JSON.stringify(params),
     });
@@ -230,10 +237,9 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(this.getUrl('/upload/image'), {
+    const res = await this.fetch('/upload/image', {
       method: 'POST',
       body: formData,
-      headers: this.getRequestHeaders(),
     });
     const json: UploadImageResult | ResponseError = await res.json();
 
@@ -258,10 +264,9 @@ export class ComfyUIClient {
       formData.append('overwrite', overwrite.toString());
     }
 
-    const res = await fetch(this.getUrl('/upload/mask'), {
+    const res = await this.fetch('/upload/mask', {
       method: 'POST',
       body: formData,
-      headers: this.getRequestHeaders(),
     });
     const json: UploadImageResult | ResponseError = await res.json();
 
@@ -277,18 +282,14 @@ export class ComfyUIClient {
     subfolder: string,
     type: string,
   ): Promise<Blob> {
-    const res = await fetch(
-      this.getUrl(
-        '/view',
-        new URLSearchParams({
-          filename,
-          subfolder,
-          type,
-        }),
-      ),
-      {
-        headers: this.getRequestHeaders(),
-      },
+    const res = await this.fetch(
+      '/view',
+      {},
+      new URLSearchParams({
+        filename,
+        subfolder,
+        type,
+      }),
     );
 
     return await res.blob();
@@ -298,11 +299,8 @@ export class ComfyUIClient {
     folderName: FolderName,
     filename: string,
   ): Promise<ViewMetadataResponse> {
-    const res = await fetch(
-      this.getUrl(`/view_metadata/${folderName}?filename=${filename}`),
-      {
-        headers: this.getRequestHeaders(),
-      },
+    const res = await this.fetch(
+      `/view_metadata/${folderName}?filename=${filename}`,
     );
     const json: ViewMetadataResponse | ResponseError = await res.json();
 
@@ -314,9 +312,7 @@ export class ComfyUIClient {
   }
 
   async getSystemStats(): Promise<SystemStatsResponse> {
-    const res = await fetch(this.getUrl('/system_stats'), {
-      headers: this.getRequestHeaders(),
-    });
+    const res = await this.fetch('/system_stats');
     const json: SystemStatsResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -327,9 +323,7 @@ export class ComfyUIClient {
   }
 
   async getPrompt(): Promise<PromptQueueResponse> {
-    const res = await fetch(this.getUrl('/prompt'), {
-      headers: this.getRequestHeaders(),
-    });
+    const res = await this.fetch('/prompt');
     const json: PromptQueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -340,11 +334,8 @@ export class ComfyUIClient {
   }
 
   async getObjectInfo(nodeClass?: string): Promise<ObjectInfoResponse> {
-    const res = await fetch(
-      this.getUrl(`/object_info` + (nodeClass ? `/${nodeClass}` : '')),
-      {
-        headers: this.getRequestHeaders(),
-      },
+    const res = await this.fetch(
+      `/object_info` + (nodeClass ? `/${nodeClass}` : ''),
     );
     const json: ObjectInfoResponse | ResponseError = await res.json();
 
@@ -378,10 +369,7 @@ export class ComfyUIClient {
     const method = fetchOption ? fetchOption.method : 'get';
     const res = await fetch(
       `${host}/history${actualPromptId ? `/${actualPromptId}` : ''}`,
-      {
-        method,
-        headers: this.getRequestHeaders(),
-      },
+      { method },
     );
     const json: HistoryResult | ResponseError = await res.json();
 
@@ -396,11 +384,8 @@ export class ComfyUIClient {
 
   async getQueue(fetchOption: any): Promise<QueueResponse> {
     const host = fetchOption ? fetchOption.host : this.host;
-    const method = fetchOption ? fetchOption.method : 'get';
-    const res = await fetch(`${host}/queue`, {
-      method,
-      headers: this.getRequestHeaders(),
-    });
+    const method = fetchOption ? fetchOption.method : 'GET';
+    const res = await this.fetch(`${host}/queue`, { method });
     const json: QueueResponse | ResponseError = await res.json();
 
     if ('error' in json) {
@@ -411,12 +396,11 @@ export class ComfyUIClient {
   }
 
   async deleteQueue(id: string): Promise<QueueResponse> {
-    const res = await fetch(this.getUrl('/queue'), {
+    const res = await this.fetch('/queue', {
       method: 'POST',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...this.getRequestHeaders(),
       },
       body: JSON.stringify({
         delete: id,
@@ -535,20 +519,26 @@ export class ComfyUIClient {
     });
   }
 
-  private getRequestHeaders() {
-    const result: HeadersInit = {};
-
-    if (this.token) {
-      result.Authorization = `Bearer ${this.token}`;
-    }
-
-    return result;
-  }
-
-  private getUrl(
+  private fetch(
     path: string,
+    options: RequestInit = {},
     params: URLSearchParams = new URLSearchParams(),
   ) {
-    return `${this.host}${path}${params.size ? `?${params.toString()}` : ''}`;
+    const headers: HeadersInit = {};
+
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    return fetch(
+      `${this.host}${path}${params.size ? `?${params.toString()}` : ''}`,
+      {
+        ...options,
+        headers: {
+          ...options.headers,
+          ...headers,
+        },
+      },
+    );
   }
 }
