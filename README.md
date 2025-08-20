@@ -113,8 +113,8 @@ await client.disconnect();
 
 This project is licensed under the [MIT License][license].
 
-[badge-version]: https://img.shields.io/npm/v/comfy-ui-client.svg
-[badge-license]: https://img.shields.io/npm/l/comfy-ui-client.svg
+[badge-version]: https://img.shields.io/npm/v/@ayan4m1/comfy-ui-client.svg
+[badge-license]: https://img.shields.io/npm/l/@ayan4m1/comfy-ui-client.svg
 [npm]: https://www.npmjs.com/package/@ayan4m1/comfy-ui-client
 [license]: https://github.com/ayan4m1/comfy-ui-client/blob/main/LICENSE
 [examples-generate]: https://github.com/ayan4m1/comfy-ui-client/tree/main/examples/generate
