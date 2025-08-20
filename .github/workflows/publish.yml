@@ -14,7 +14,6 @@ jobs:
         with:
           node-version: 'lts/*'
       - run: pnpm install
-      - run: pnpm run build
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
