@@ -42,27 +42,34 @@
   "scripts": {
     "build": "tsup src/index.ts --dts --format cjs,esm,iife --platform browser --globalName ComfyUIClient",
     "dev": "npm run build --watch",
-    "lint": "eslint .",
-    "prettier": "prettier --config .prettierrc --write ./src",
-    "release": "npm run build && npm publish --access public"
+    "lint": "eslint ./src/*.ts",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "globby": "^14.1.0",
     "isomorphic-ws": "^5.0.0",
-    "pino": "^8.14.2",
-    "uuid": "^9.0.0",
-    "ws": "^8.13.0"
+    "pino": "8.21.0",
+    "uuid": "9.0.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.8",
-    "@types/node": "^18.11.14",
-    "@types/uuid": "^9.0.2",
-    "@types/ws": "^8.5.5",
-    "@typescript-eslint/eslint-plugin": "^5.61.0",
-    "@typescript-eslint/parser": "^5.61.0",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@commitlint/cz-commitlint": "^19.8.1",
+    "@types/debug": "^4.1.12",
+    "@types/node": "18.19.123",
+    "@types/uuid": "9.0.8",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "commitizen": "^4.3.1",
+    "commitlint": "^19.8.1",
     "eslint": "^8.44.0",
-    "tsup": "^7.1.0",
-    "typescript": "~5.0"
+    "husky": "^9.1.7",
+    "inquirer": "^9.3.7",
+    "lint-staged": "^16.1.5",
+    "semantic-release": "^24.2.7",
+    "tsup": "7.2.0",
+    "typescript": "~5.9"
   },
   "directories": {
     "example": "examples"
