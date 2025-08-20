@@ -6,7 +6,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@artifyfun/comfy-ui-client": "workspace:*",
+    "@ayan4m1/comfy-ui-client": "workspace:*",
     "commander": "^11.0.0",
     "uuid": "^9.0.0"
   },
