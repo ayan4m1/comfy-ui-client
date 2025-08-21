@@ -15,6 +15,11 @@
   "bugs": {
     "url": "https://github.com/ayan4m1/comfy-ui-client/issues"
   },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint"
+    }
+  },
   "keywords": [
     "comfy-ui",
     "comfy-ui node",
